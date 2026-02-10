@@ -1,8 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 class love(BaseModel):
-    receiver:str
-    message:str
-    send_mail:str="valentinesdayspecialbot@gmail.com"
-    sender_pass:str= "ogrisjgxsnsgxuou"
-    
+    receiver: EmailStr
+    message: str

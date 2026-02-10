@@ -15,6 +15,10 @@ from pyngrok import ngrok
 import uvicorn
 
 
+import os
+
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 
 
 app=FastAPI()
@@ -36,20 +40,18 @@ app.add_middleware(
 
 @app.post("/send-mail")
 def send_mail(data: love):
-    sender = data.send_mail
-    pass_word = data.sender_pass
     receiver = data.receiver
     message = data.message
 
     em = EmailMessage()
-    em['From'] = sender
+    em['From'] = SENDER_EMAIL
     em['To'] = receiver
     em['Subject'] = "Valentine Message 💖"
 
     # encode message for URL
-    import urllib.parse
     encoded_message = urllib.parse.quote(message)
-    link = f"http://127.0.0.1:8006/love?from_mail={sender}&message={encoded_message}"
+    BASE_URL = "https://valentine-mail-app.onrender.com"
+    link = f"{BASE_URL}/love?from_mail={SENDER_EMAIL}&message={encoded_message}"
 
     em.set_content(f"""
 {message}
@@ -63,7 +65,7 @@ Open this link 💌
 
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
-            smtp.login(sender, pass_word)
+            smtp.login(SENDER_EMAIL, SENDER_PASSWORD)
             smtp.send_message(em)
         return {"message": "Mail sent successfully 💌"}  # always return message key
     except Exception as e:
