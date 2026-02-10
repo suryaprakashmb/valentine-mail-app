@@ -1,34 +1,23 @@
-from fastapi import FastAPI
-import ssl
-import smtplib
-from email.message import EmailMessage
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from models import love
-from fastapi.responses import HTMLResponse
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from fastapi import Request
 from fastapi.staticfiles import StaticFiles
+from models import love
 import urllib.parse
-
-from pyngrok import ngrok
-import uvicorn
-
-
 import os
+import resend
 
-SENDER_EMAIL = os.getenv("SENDER_EMAIL")
-SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
+# Resend API Key
+resend.api_key = os.getenv("RESEND_API_KEY")
 
-
-app=FastAPI()
+app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,35 +32,23 @@ def send_mail(data: love):
     receiver = data.receiver
     message = data.message
 
-    em = EmailMessage()
-    em['From'] = SENDER_EMAIL
-    em['To'] = receiver
-    em['Subject'] = "Valentine Message 💖"
-
-    # encode message for URL
     encoded_message = urllib.parse.quote(message)
     BASE_URL = "https://valentine-mail-app.onrender.com"
-    link = f"{BASE_URL}/love?from_mail={SENDER_EMAIL}&message={encoded_message}"
+    link = f"{BASE_URL}/love?from_mail=Secret%20Admirer&message={encoded_message}"
 
-    em.set_content(f"""
-{message}
+    resend.Emails.send({
+        "from": "Valentine 💖 <onboarding@resend.dev>",
+        "to": receiver,
+        "subject": "Someone sent you a Valentine 💌",
+        "html": f"""
+            <h2>{message}</h2>
+            <p>Click below to open your Valentine surprise 💖</p>
+            <a href="{link}">Open Love Message</a>
+        """
+    })
 
-Open this link 💌
-{link}
-""")
+    return {"message": "Mail sent successfully 💌"}
 
-    import ssl
-    context = ssl.create_default_context()
-
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as smtp:
-            smtp.login(SENDER_EMAIL, SENDER_PASSWORD)
-            smtp.send_message(em)
-        return {"message": "Mail sent successfully 💌"}  # always return message key
-    except Exception as e:
-        return {"message": f"Error sending mail: {str(e)}"}  # always return message key
-
-    
 
 @app.get("/love", response_class=HTMLResponse)
 def love_page(from_mail: str, message: str = ""):
